@@ -18,7 +18,9 @@ class Mitfahrgelegenheit(db.Model):
     gueltig_bis = db.Column(db.String(20), nullable=True)
     info = db.Column(db.Text, nullable=True)
 
-db.create_all()
+# Stelle sicher, dass du im richtigen Kontext arbeitest
+with app.app_context():
+    db.create_all()
 
 @app.route('/suchen', methods=['GET'])
 def suchen():
