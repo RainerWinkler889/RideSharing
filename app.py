@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -23,6 +23,11 @@ class Mitfahrgelegenheit(db.Model):
 # Initialisiert die Datenbank, wenn sie noch nicht existiert
 with app.app_context():
     db.create_all()
+
+# Route für die Startseite (Root-URL)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # API zum Speichern einer Mitfahrgelegenheit
 @app.route('/api/offer', methods=['POST'])
