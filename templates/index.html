@@ -1,9 +1,9 @@
 <header>
-    <img src="BMH_Logo.png" width="100">
+    <img src="{{ url_for('static', filename='assets/BMH_Logo.png') }}" width="100">
 </header>
 <!DOCTYPE html>
 <html lang="de">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
