@@ -3,8 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mitfahrboerse.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# Datenbankmodell für Mitfahrgelegenheit
 class Mitfahrgelegenheit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     plz = db.Column(db.String(10), nullable=False)
@@ -18,21 +20,54 @@ class Mitfahrgelegenheit(db.Model):
     gueltig_bis = db.Column(db.String(20), nullable=True)
     info = db.Column(db.Text, nullable=True)
 
-# Stelle sicher, dass du im richtigen Kontext arbeitest
+# Initialisiert die Datenbank, wenn sie noch nicht existiert
 with app.app_context():
     db.create_all()
 
-@app.route('/suchen', methods=['GET'])
-def suchen():
+# API zum Speichern einer Mitfahrgelegenheit
+@app.route('/api/offer', methods=['POST'])
+def offer():
+    data = request.get_json()
+    
+    # Validierung der Eingabedaten
+    required_fields = ['plz', 'ort', 'name', 'email']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'{field} ist erforderlich!'}), 400
+    
+    # Erstellen eines neuen Mitfahrgelegenheitseintrags
+    mitfahrgelegenheit = Mitfahrgelegenheit(
+        plz=data['plz'],
+        ort=data['ort'],
+        strasse=data.get('strasse'),
+        name=data['name'],
+        email=data['email'],
+        klasse=data.get('klasse'),
+        handy=data.get('handy'),
+        gueltig_von=data.get('gueltig_von'),
+        gueltig_bis=data.get('gueltig_bis'),
+        info=data.get('info')
+    )
+    
+    # Speichern in der Datenbank
+    db.session.add(mitfahrgelegenheit)
+    db.session.commit()
+    
+    return jsonify({'message': 'Mitfahrgelegenheit wurde erfolgreich angeboten!'}), 201
+
+# API zum Suchen von Mitfahrgelegenheiten
+@app.route('/api/search', methods=['GET'])
+def search():
     plz = request.args.get('plz')
     ort = request.args.get('ort')
 
     if not plz or not ort:
         return jsonify({'error': 'PLZ und Ort sind Pflichtfelder!'}), 400
 
-    ergebnisse = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
-    
-    ergebnisliste = [
+    # Suchen nach Mitfahrgelegenheiten
+    results = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
+
+    result_list = [
         {
             'id': fahrt.id,
             'plz': fahrt.plz,
@@ -45,7 +80,10 @@ def suchen():
             'gueltig_von': fahrt.gueltig_von,
             'gueltig_bis': fahrt.gueltig_bis,
             'info': fahrt.info
-        } for fahrt in ergebnisse
+        } for fahrt in results
     ]
 
-    return jsonify(ergebnisliste), 200
+    return jsonify(result_list), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
