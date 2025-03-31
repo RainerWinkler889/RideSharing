@@ -1,0 +1,80 @@
+<header>
+    <img src="Projektarbeit 25/BMH_Logo_Transparent.png" alt="Schönes Bild">
+</header>
+<!DOCTYPE html>
+<html lang="de">
+<link rel="stylesheet" href="styles.css">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitfahrgelegenheit</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <h1>Mitfahrgelegenheit anbieten</h1>
+    <form id="offerForm">
+        <input name="plz" placeholder="PLZ" required />
+        <input name="ort" placeholder="Ort" required />
+        <input name="strasse" placeholder="Straße, Hausnummer" />
+        <input name="name" placeholder="Name" required />
+        <input name="email" placeholder="E-Mail" required />
+        <button type="submit">Anbieten</button>
+    </form>
+
+    <h1>Mitfahrgelegenheit suchen</h1>
+    <form id="searchForm">
+        <input name="plz" placeholder="PLZ" required />
+        <input name="ort" placeholder="Ort" required />
+        <button type="submit">Suchen</button>
+    </form>
+
+    <h2>Ergebnisse</h2>
+    <ul id="results"></ul>
+
+    <h1>Karte</h1>
+    <div id="map" style="height: 400px;"></div>
+
+    <script>
+        document.getElementById("offerForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const jsonData = Object.fromEntries(formData.entries());
+            await fetch("http://localhost:5000/api/offer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(jsonData)
+            });
+            alert("Mitfahrgelegenheit gespeichert!");
+        });
+
+        document.getElementById("searchForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const plz = e.target.plz.value;
+            const ort = e.target.ort.value;
+            const response = await fetch(`http://localhost:5000/api/search?plz=${plz}&ort=${ort}`);
+            const results = await response.json();
+
+            const resultsList = document.getElementById("results");
+            resultsList.innerHTML = "";
+            results.forEach(r => {
+                const li = document.createElement("li");
+                li.innerText = `${r[1]}, ${r[2]} - ${r[3]} (${r[4]})`;
+                resultsList.appendChild(li);
+            });
+
+            updateMap(results);
+        });
+
+        const map = L.map("map").setView([51.1657, 10.4515], 6);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+        function updateMap(results) {
+            results.forEach(r => {
+                const marker = L.marker([51.1657, 10.4515]).addTo(map);
+                marker.bindPopup(`${r[1]}, ${r[2]} - ${r[3]} (${r[4]})`).openPopup();
+            });
+        }
+    </script>
+</body>
+</html>
