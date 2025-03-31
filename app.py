@@ -32,15 +32,18 @@ def index():
 # API zum Speichern einer Mitfahrgelegenheit
 @app.route('/api/offer', methods=['POST'])
 def offer():
+    # Hier kommt die Überprüfung der übergebenen Daten
     data = request.get_json()
-    
-    # Validierung der Eingabedaten
+
+    if not data:
+        return jsonify({'error': 'Keine Daten empfangen!'}), 400
+
+    # Pflichtfelder prüfen
     required_fields = ['plz', 'ort', 'name', 'email']
     for field in required_fields:
         if field not in data:
             return jsonify({'error': f'{field} ist erforderlich!'}), 400
-    
-    # Erstellen eines neuen Mitfahrgelegenheitseintrags
+
     mitfahrgelegenheit = Mitfahrgelegenheit(
         plz=data['plz'],
         ort=data['ort'],
@@ -55,10 +58,13 @@ def offer():
     )
     
     # Speichern in der Datenbank
-    db.session.add(mitfahrgelegenheit)
-    db.session.commit()
-    
-    return jsonify({'message': 'Mitfahrgelegenheit wurde erfolgreich angeboten!'}), 201
+    try:
+        db.session.add(mitfahrgelegenheit)
+        db.session.commit()
+        return jsonify({'message': 'Mitfahrgelegenheit wurde erfolgreich angeboten!'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Fehler beim Speichern der Mitfahrgelegenheit.'}), 500
 
 # API zum Suchen von Mitfahrgelegenheiten
 @app.route('/api/search', methods=['GET'])
@@ -69,7 +75,6 @@ def search():
     if not plz or not ort:
         return jsonify({'error': 'PLZ und Ort sind Pflichtfelder!'}), 400
 
-    # Suchen nach Mitfahrgelegenheiten
     results = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
 
     result_list = [

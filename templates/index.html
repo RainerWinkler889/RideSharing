@@ -40,39 +40,49 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const jsonData = Object.fromEntries(formData.entries());
-            await fetch("http://localhost:5000/api/offer", {
+            
+            // Hier wird die POST-Anfrage an Flask gesendet
+            const response = await fetch("/api/offer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(jsonData)
             });
-            alert("Mitfahrgelegenheit gespeichert!");
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);  // Erfolgreiche Speicherung
+            } else {
+                alert(result.error);  // Fehleranzeige
+            }
         });
 
         document.getElementById("searchForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const plz = e.target.plz.value;
             const ort = e.target.ort.value;
-            const response = await fetch(`http://localhost:5000/api/search?plz=${plz}&ort=${ort}`);
+            const response = await fetch(`/api/search?plz=${plz}&ort=${ort}`);
             const results = await response.json();
 
             const resultsList = document.getElementById("results");
             resultsList.innerHTML = "";
             results.forEach(r => {
                 const li = document.createElement("li");
-                li.innerText = `${r[1]}, ${r[2]} - ${r[3]} (${r[4]})`;
+                li.innerText = `${r.name} (${r.plz}, ${r.ort})`;
                 resultsList.appendChild(li);
             });
 
             updateMap(results);
         });
 
+        // Karte initialisieren
         const map = L.map("map").setView([51.1657, 10.4515], 6);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
+        // Karte aktualisieren mit den Suchergebnissen
         function updateMap(results) {
             results.forEach(r => {
                 const marker = L.marker([51.1657, 10.4515]).addTo(map);
-                marker.bindPopup(`${r[1]}, ${r[2]} - ${r[3]} (${r[4]})`).openPopup();
+                marker.bindPopup(`${r.name} (${r.plz}, ${r.ort})`).openPopup();
             });
         }
     </script>
