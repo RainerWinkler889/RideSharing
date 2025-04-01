@@ -128,5 +128,30 @@ def search():
 
     return jsonify(result_list), 200
 
+# API zum Abrufen aller Mitfahrgelegenheiten
+@app.route('/api/offers', methods=['GET'])
+def get_all_offers():
+    results = Mitfahrgelegenheit.query.all()
+
+    result_list = [
+        {
+            'id': fahrt.id,
+            'plz': fahrt.plz,
+            'ort': fahrt.ort,
+            'strasse': fahrt.strasse,
+            'name': fahrt.name,
+            'email': fahrt.email,
+            'klasse': fahrt.klasse,
+            'handy': fahrt.handy,
+            'gueltig_von': fahrt.gueltig_von,
+            'gueltig_bis': fahrt.gueltig_bis,
+            'info': fahrt.info,
+            'latitude': fahrt.latitude,
+            'longitude': fahrt.longitude
+        } for fahrt in results
+    ]
+
+    return jsonify(result_list), 200
+
 if __name__ == '__main__':
     app.run(debug=True)

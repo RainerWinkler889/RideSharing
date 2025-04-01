@@ -51,57 +51,25 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+
+            // Lade alle Mitfahrgelegenheiten und setze Marker
+            fetch('/api/offers')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(r => {
+                        if (r.latitude && r.longitude) {
+                            const marker = L.marker([r.latitude, r.longitude])
+                                .addTo(map)
+                                .bindPopup(`<b>${r.name}</b><br>${r.plz}, ${r.ort}`)
+                                .openPopup();
+                            markers.push(marker);  // Marker speichern
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Fehler beim Abrufen der Mitfahrgelegenheiten:', error);
+                });
         }
-
-        // Suchergebnisse anzeigen und Marker setzen
-        document.getElementById("searchForm").addEventListener("submit", async function (e) {
-            e.preventDefault();
-            const plz = e.target.plz.value;
-            const ort = e.target.ort.value;
-            const response = await fetch(`/api/search?plz=${plz}&ort=${ort}`);
-            const results = await response.json();
-
-            const resultsList = document.getElementById("results");
-            resultsList.innerHTML = "";
-            markers.forEach(marker => marker.remove());  // Entferne alte Marker
-            markers = [];  // Leere Marker-Liste
-
-            results.forEach(r => {
-                const li = document.createElement("li");
-                li.innerText = `${r.name} (${r.plz}, ${r.ort})`;
-                resultsList.appendChild(li);
-
-                // Marker auf der Karte setzen
-                if (r.latitude && r.longitude) {
-                    const marker = L.marker([r.latitude, r.longitude])
-                        .addTo(map)
-                        .bindPopup(`<b>${r.name}</b><br>${r.plz}, ${r.ort}`)
-                        .openPopup();
-                    markers.push(marker);  // Marker speichern
-                }
-            });
-        });
-
-        // Formular zum Anbieten einer Mitfahrgelegenheit
-        document.getElementById("offerForm").addEventListener("submit", async function (e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const jsonData = Object.fromEntries(formData.entries());
-            
-            // Hier wird die POST-Anfrage an Flask gesendet
-            const response = await fetch("/api/offer", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(jsonData)
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                alert(result.message);  // Erfolgreiche Speicherung
-            } else {
-                alert(result.error);  // Fehleranzeige
-            }
-        });
 
         // Initiiere die Karte bei Seitenladung
         window.onload = initMap;
