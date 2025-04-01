@@ -8,15 +8,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mitfahrgelegenheit</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Leaflet CSS für Karten -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <h1>Mitfahrgelegenheit anbieten</h1>
     <form id="offerForm">
         <input name="plz" placeholder="PLZ" required />
         <input name="ort" placeholder="Ort" required />
-        <input name="strasse" placeholder="Straße, Hausnummer" />
         <input name="name" placeholder="Name" required />
         <input name="email" placeholder="E-Mail" required />
         <button type="submit">Anbieten</button>
@@ -32,10 +37,52 @@
     <h2>Ergebnisse</h2>
     <ul id="results"></ul>
 
-    <h1>Karte</h1>
-    <div id="map" style="height: 400px;"></div>
+    <!-- Karte anzeigen -->
+    <div id="map"></div>
 
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
+        let map;
+        let markers = [];
+
+        // Initialisiere die Karte
+        function initMap() {
+            map = L.map('map').setView([51.1657, 10.4515], 6);  // Anfangszentrum auf Deutschland
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+        }
+
+        // Suchergebnisse anzeigen und Marker setzen
+        document.getElementById("searchForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const plz = e.target.plz.value;
+            const ort = e.target.ort.value;
+            const response = await fetch(`/api/search?plz=${plz}&ort=${ort}`);
+            const results = await response.json();
+
+            const resultsList = document.getElementById("results");
+            resultsList.innerHTML = "";
+            markers.forEach(marker => marker.remove());  // Entferne alte Marker
+            markers = [];  // Leere Marker-Liste
+
+            results.forEach(r => {
+                const li = document.createElement("li");
+                li.innerText = `${r.name} (${r.plz}, ${r.ort})`;
+                resultsList.appendChild(li);
+
+                // Marker auf der Karte setzen
+                if (r.latitude && r.longitude) {
+                    const marker = L.marker([r.latitude, r.longitude])
+                        .addTo(map)
+                        .bindPopup(`<b>${r.name}</b><br>${r.plz}, ${r.ort}`)
+                        .openPopup();
+                    markers.push(marker);  // Marker speichern
+                }
+            });
+        });
+
+        // Formular zum Anbieten einer Mitfahrgelegenheit
         document.getElementById("offerForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const formData = new FormData(e.target);
@@ -56,35 +103,8 @@
             }
         });
 
-        document.getElementById("searchForm").addEventListener("submit", async function (e) {
-            e.preventDefault();
-            const plz = e.target.plz.value;
-            const ort = e.target.ort.value;
-            const response = await fetch(`/api/search?plz=${plz}&ort=${ort}`);
-            const results = await response.json();
-
-            const resultsList = document.getElementById("results");
-            resultsList.innerHTML = "";
-            results.forEach(r => {
-                const li = document.createElement("li");
-                li.innerText = `${r.name} (${r.plz}, ${r.ort})`;
-                resultsList.appendChild(li);
-            });
-
-            updateMap(results);
-        });
-
-        // Karte initialisieren
-        const map = L.map("map").setView([51.1657, 10.4515], 6);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-
-        // Karte aktualisieren mit den Suchergebnissen
-        function updateMap(results) {
-            results.forEach(r => {
-                const marker = L.marker([51.1657, 10.4515]).addTo(map);
-                marker.bindPopup(`${r.name} (${r.plz}, ${r.ort})`).openPopup();
-            });
-        }
+        // Initiiere die Karte bei Seitenladung
+        window.onload = initMap;
     </script>
 </body>
 </html>
