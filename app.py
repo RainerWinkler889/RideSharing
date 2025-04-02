@@ -20,8 +20,8 @@ class Mitfahrgelegenheit(db.Model):
     gueltig_von = db.Column(db.String(20), nullable=True)
     gueltig_bis = db.Column(db.String(20), nullable=True)
     info = db.Column(db.Text, nullable=True)
-    latitude = db.Column(db.Float, nullable=True)  # Neue Spalte für Latitude
-    longitude = db.Column(db.Float, nullable=True)  # Neue Spalte für Longitude
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
 
 # Initialisiert die Datenbank, wenn sie noch nicht existiert
 with app.app_context():
@@ -44,19 +44,16 @@ def offer():
         if field not in data:
             return jsonify({'error': f'{field} ist erforderlich!'}), 400
 
-    # Geocoding API von Nominatim verwenden, um Latitude und Longitude zu erhalten
-    location = f"{data['strasse']}, {data['plz']} {data['ort']}, Germany" if 'strasse' in data else f"{data['plz']} {data['ort']}, Germany"
+    location = f"{data['plz']} {data['ort']}, Germany"
     geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
-    
-    # Header für die API-Anfrage hinzufügen
+
     headers = {
-        'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'  # Deine Kontakt-Email oder Website
+        'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'
     }
 
-    # Antwort von der API anfordern und prüfen
     try:
         response = requests.get(geocode_url, headers=headers)
-        response.raise_for_status()  # Überprüft, ob der Statuscode 200 ist
+        response.raise_for_status()
         response_json = response.json()
         
         if response_json:
@@ -68,9 +65,6 @@ def offer():
     except requests.exceptions.RequestException as e:
         print(f"Fehler bei der API-Anfrage: {e}")
         return jsonify({'error': 'Fehler bei der Geocoding-Anfrage.'}), 500
-    except ValueError as e:
-        print(f"Fehler beim Parsen der Antwort: {e}")
-        return jsonify({'error': 'Ungültige Antwort vom Geocoding-Service.'}), 500
 
     mitfahrgelegenheit = Mitfahrgelegenheit(
         plz=data['plz'],
@@ -86,27 +80,20 @@ def offer():
         latitude=latitude,
         longitude=longitude
     )
-    
-    # Speichern in der Datenbank
+
     try:
         db.session.add(mitfahrgelegenheit)
         db.session.commit()
         return jsonify({'message': 'Mitfahrgelegenheit wurde erfolgreich angeboten!'}), 201
     except Exception as e:
         db.session.rollback()
-        print(f"Fehler beim Speichern: {e}")  # Debugging-Ausgabe
+        print(f"Fehler beim Speichern: {e}")
         return jsonify({'error': 'Fehler beim Speichern der Mitfahrgelegenheit.'}), 500
 
-# API zum Suchen von Mitfahrgelegenheiten
-@app.route('/api/search', methods=['GET'])
-def search():
-    plz = request.args.get('plz')
-    ort = request.args.get('ort')
-
-    if not plz or not ort:
-        return jsonify({'error': 'PLZ und Ort sind Pflichtfelder!'}), 400
-
-    results = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
+# API zum Abrufen aller Mitfahrgelegenheiten
+@app.route('/api/offers', methods=['GET'])
+def get_all_offers():
+    results = Mitfahrgelegenheit.query.all()
 
     result_list = [
         {
@@ -128,10 +115,19 @@ def search():
 
     return jsonify(result_list), 200
 
-# API zum Abrufen aller Mitfahrgelegenheiten
-@app.route('/api/offers', methods=['GET'])
-def get_all_offers():
-    results = Mitfahrgelegenheit.query.all()
+# API zum Suchen von Mitfahrgelegenheiten basierend auf PLZ und Ort
+@app.route('/api/search', methods=['GET'])
+def search_offer():
+    plz = request.args.get('plz')
+    ort = request.args.get('ort')
+
+    if not plz or not ort:
+        return jsonify({'error': 'PLZ und Ort sind erforderlich'}), 400
+
+    results = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
+
+    if not results:
+        return jsonify({'error': 'Keine Angebote gefunden'}), 404
 
     result_list = [
         {

@@ -8,12 +8,29 @@ const RideSharingApp = () => {
     ort: "",
     strasse: "",
     name: "",
-    email: ""
+    email: "",
   });
 
+  // Beispielangebote mit Koordinaten
   const [offers, setOffers] = useState([
-    { id: 1, plz: "10115", ort: "Berlin", strasse: "Musterstraße 1", name: "Max Mustermann", email: "max@example.com", position: [52.5200, 13.4050] },
-    { id: 2, plz: "80331", ort: "München", strasse: "Beispielweg 5", name: "Anna Schmidt", email: "anna@example.com", position: [48.1351, 11.5820] }
+    { 
+      id: 1, 
+      plz: "10115", 
+      ort: "Berlin", 
+      strasse: "Musterstraße 1", 
+      name: "Max Mustermann", 
+      email: "max@example.com", 
+      position: [52.5200, 13.4050] // Koordinaten für Berlin
+    },
+    { 
+      id: 2, 
+      plz: "80331", 
+      ort: "München", 
+      strasse: "Beispielweg 5", 
+      name: "Anna Schmidt", 
+      email: "anna@example.com", 
+      position: [48.1351, 11.5820] // Koordinaten für München
+    }
   ]);
 
   const handleChange = (e) => {
@@ -23,6 +40,7 @@ const RideSharingApp = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     alert("Mitfahrgelegenheit angeboten: " + JSON.stringify(offer));
+    // Hier kannst du auch ein API-Request machen, um das Angebot zu speichern
   };
 
   return (

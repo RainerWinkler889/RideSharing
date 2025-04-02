@@ -24,6 +24,20 @@
         <input name="ort" placeholder="Ort" required />
         <input name="name" placeholder="Name" required />
         <input name="email" placeholder="E-Mail" required />
+        <input name="strasse" placeholder="Straße, Hausnummer" required />
+        <input name="klasse" placeholder="Klasse (optional)" />
+        <input name="handy" placeholder="Handynummer (optional)" />
+    
+        <!-- Labels statt Placeholder für die Datumsfelder -->
+        <label for="gueltig_von">Gültig von (optional):</label>
+        <input id="gueltig_von" name="gueltig_von" type="date" />
+    
+        <label for="gueltig_bis">Gültig bis (optional):</label>
+        <input id="gueltig_bis" name="gueltig_bis" type="date" />
+    
+        <!-- Textbox für zusätzliche Informationen -->
+        <textarea name="info" placeholder="Zusätzliche Informationen (optional)"></textarea>
+    
         <button type="submit">Anbieten</button>
     </form>
     <p id="offerMessage"></p>
@@ -50,9 +64,12 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+            
+            // Abrufen und Anzeigen von Mitfahrgelegenheiten
             fetch('/api/offers')
                 .then(response => response.json())
                 .then(data => {
+                    console.log(data); // Debugging: Ausgabe der Daten
                     data.forEach(r => {
                         if (r.latitude && r.longitude) {
                             const marker = L.marker([r.latitude, r.longitude])
@@ -66,6 +83,7 @@
                 .catch(error => console.error('Fehler beim Abrufen der Mitfahrgelegenheiten:', error));
         }
 
+        // Suchfunktion
         document.getElementById("searchForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const plz = e.target.plz.value;
@@ -93,6 +111,7 @@
             });
         });
 
+        // Formular zur Mitfahrgelegenheit anbieten
         document.getElementById("offerForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const formData = new FormData(e.target);
