@@ -29,19 +29,6 @@ class Mitfahrgelegenheit(db.Model):
 with app.app_context():
     db.create_all()
 
-def is_valid_input(data):
-    if not re.fullmatch(r'\d{5}', data['plz']):
-        return 'Ungültige PLZ! Muss 5 Ziffern enthalten.'
-    if not re.fullmatch(r'^[a-zA-ZäöüÄÖÜß\s-]+$', data['ort']):
-        return 'Ungültiger Ort! Nur Buchstaben, Leerzeichen und Bindestriche erlaubt.'
-    if not re.fullmatch(r'^[a-zA-ZäöüÄÖÜß\s-]+$', data['name']):
-        return 'Ungültiger Name! Nur Buchstaben, Leerzeichen und Bindestriche erlaubt.'
-    if not re.fullmatch(r'^[\w\.-]+@[\w\.-]+\.\w+$', data['email']):
-        return 'Ungültige E-Mail-Adresse!'
-    if 'handy' in data and data['handy'] and not re.fullmatch(r'^[+]?\d+$', data['handy']):
-        return 'Ungültige Handynummer! Nur Zahlen und optional ein führendes + erlaubt.'
-    return None
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -56,10 +43,6 @@ def offer():
     for field in required_fields:
         if field not in data or not data[field].strip():
             return jsonify({'error': f'{field} ist erforderlich!'}), 400
-    
-    validation_error = is_valid_input(data)
-    if validation_error:
-        return jsonify({'error': validation_error}), 400
 
     location = f"{data['plz']} {data['ort']}, Germany"
     geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
