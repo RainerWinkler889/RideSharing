@@ -1,6 +1,3 @@
-
-
-
 import sqlite3
 import random
 
@@ -11,7 +8,7 @@ cursor = conn.cursor()
 
 # Tabelle erstellen, falls nicht vorhanden
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS mitfahrgelegenheiten (
+CREATE TABLE IF NOT EXISTS mitfahrgelegenheit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plz TEXT,
     ort TEXT,
@@ -28,37 +25,40 @@ CREATE TABLE IF NOT EXISTS mitfahrgelegenheiten (
 );
 """)
 
-# Zufällige Testdaten
-orte = [
-    ("10115", "Berlin", 52.532, 13.384),
-    ("80331", "München", 48.137, 11.575),
-    ("04109", "Leipzig", 51.339, 12.374),
-    ("50667", "Köln", 50.939, 6.957),
-    ("01067", "Dresden", 51.051, 13.741),
-    ("20095", "Hamburg", 53.550, 10.000),
-    ("90402", "Nürnberg", 49.452, 11.076),
-    ("70173", "Stuttgart", 48.778, 9.180),
-    ("60311", "Frankfurt am Main", 50.110, 8.682),
-    ("28195", "Bremen", 53.081, 8.805)
-]
+# Datei DE.txt einlesen
+with open('/Users/paulrau/Downloads/app_python/RideSharing/DE.txt', 'r') as f:
+    lines = f.readlines()
 
+# Alle relevanten Daten aus der DE.txt extrahieren
+orte = []
+for line in lines:
+    parts = line.strip().split("\t")
+    if len(parts) >= 6:  # Sicherstellen, dass alle benötigten Felder vorhanden sind
+        plz = parts[0]  # PLZ
+        ort = parts[1]  # Ort
+        lat = float(parts[4])  # Latitude
+        lon = float(parts[5])  # Longitude
+        orte.append((plz, ort, lat, lon))
+
+# Liste für Namen und E-Mail-Domains
 namen = ["Max Mustermann", "Erika Musterfrau", "Hans Müller", "Julia Schmidt", "Lukas Wagner",
          "Michael Schröder", "Sophie Lehmann", "Felix Becker", "Laura Fischer", "Tobias Meier"]
 
 email_domains = ["example.com", "test.de", "demo.org", "mail.net", "webmail.com"]
 
-# 150 zufällige Einträge generieren
+# 500 zufällige Einträge generieren
 data = []
-for i in range(150):
-    plz, ort, lat, lon = random.choice(orte)
+for i in range(500):
+    plz, ort, lat, lon = random.choice(orte)  # Zufälligen Ort wählen
     name = random.choice(namen)
     email = name.lower().replace(" ", ".") + "@" + random.choice(email_domains)
-    
+
+    # Eintrag in die Liste hinzufügen
     data.append((plz, ort, "", name, email, "", "", "", "", "", lat, lon))
 
 # Einfügen in die Datenbank
 cursor.executemany("""
-INSERT INTO mitfahrgelegenheiten (plz, ort, strasse, name, email, klasse, handy, gueltig_von, gueltig_bis, info, latitude, longitude)
+INSERT INTO mitfahrgelegenheit (plz, ort, strasse, name, email, klasse, handy, gueltig_von, gueltig_bis, info, latitude, longitude)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 """, data)
 
@@ -66,7 +66,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 conn.commit()
 
 # Überprüfen, ob die Daten erfolgreich eingefügt wurden
-cursor.execute("SELECT COUNT(*) FROM mitfahrgelegenheiten")
+cursor.execute("SELECT COUNT(*) FROM mitfahrgelegenheit")
 count = cursor.fetchone()[0]
 print(f"{count} Datensätze wurden erfolgreich eingefügt.")
 
