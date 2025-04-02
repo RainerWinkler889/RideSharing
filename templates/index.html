@@ -40,6 +40,26 @@
     </form>
     <p id="offerMessage"></p>
 
+    <h1>Mitfahrgelegenheit bearbeiten</h1>
+    <form id="editForm">
+        <input name="id" placeholder="Angebots-ID" required />
+        <input name="code" placeholder="Code zur Bearbeitung" required />
+        <input name="plz" placeholder="Neue PLZ (optional)" />
+        <input name="ort" placeholder="Neuer Ort (optional)" />
+        <input name="name" placeholder="Neuer Name (optional)" />
+        <input name="email" placeholder="Neue E-Mail (optional)" />
+        <input name="strasse" placeholder="Neue Straße, Hausnummer (optional)" />
+        <input name="klasse" placeholder="Neue Klasse (optional)" />
+        <input name="handy" placeholder="Neue Handynummer (optional)" />
+        <label for="gueltig_von_edit">Neues Gültig von (optional):</label>
+        <input id="gueltig_von_edit" name="gueltig_von" type="date" />
+        <label for="gueltig_bis_edit">Neues Gültig bis (optional):</label>
+        <input id="gueltig_bis_edit" name="gueltig_bis" type="date" />
+        <textarea name="info" placeholder="Neue zusätzliche Informationen (optional)"></textarea>
+        <button type="submit">Bearbeiten</button>
+    </form>
+    <p id="editMessage"></p>
+
     <h1>Mitfahrgelegenheit suchen</h1>
     <form id="searchForm">
         <input name="plz" placeholder="PLZ" required />
@@ -109,6 +129,22 @@
             document.getElementById('offerMessage').innerText = result.message || 'Fehler beim Eintragen';
             document.getElementById('offerForm').reset();
             initMap();
+        });
+
+        document.getElementById("editForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const jsonData = Object.fromEntries(formData.entries());
+
+            const response = await fetch("/api/edit_offer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(jsonData)
+            });
+
+            const result = await response.json();
+            document.getElementById('editMessage').innerText = result.message || result.error || 'Fehler beim Bearbeiten';
+            document.getElementById('editForm').reset();
         });
 
         window.onload = initMap;
