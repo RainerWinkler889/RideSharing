@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS mitfahrgelegenheit (
 """)
 
 # Datei DE.txt einlesen
-with open('/Users/paulrau/Downloads/app_python/RideSharing/DE.txt', 'r') as f:
+with open('/Users/paulrau/Downloads/app_python/RideSharing/DE.txt', 'r', encoding='utf-8') as f:
     lines = f.readlines()
 
 # Alle relevanten Daten aus der DE.txt extrahieren
@@ -40,16 +40,22 @@ for line in lines:
         lon = float(parts[5])  # Longitude
         orte.append((plz, ort, lat, lon))
 
-# Liste für Namen und E-Mail-Domains
-namen = ["Max Mustermann", "Erika Musterfrau", "Hans Müller", "Julia Schmidt", "Lukas Wagner",
-         "Michael Schröder", "Sophie Lehmann", "Felix Becker", "Laura Fischer", "Tobias Meier"]
+# Namen aus namen.txt einlesen
+with open('/Users/paulrau/Downloads/app_python/RideSharing/namen.txt', 'r', encoding='utf-8') as f:
+    namen = [line.strip() for line in f.readlines()]
 
-email_domains = ["example.com", "test.de", "demo.org", "mail.net", "webmail.com"]
+# Liste für E-Mail-Domains
+email_domains = ["example.com", "test.de", "demo.org", "mail.net", "webmail.com", "gmail.com", "t-mail.com", "gmx.com"]
 
-# 500 zufällige Einträge generieren
+# 2500 zufällige Einträge generieren
 data = []
-for i in range(500):
+used_places = set()
+while len(data) < 2500:
     plz, ort, lat, lon = random.choice(orte)  # Zufälligen Ort wählen
+    if (plz, ort) in used_places:
+        continue  # Stelle sicher, dass jeder Ort nur einmal vorkommt
+    used_places.add((plz, ort))
+    
     name = random.choice(namen)
     email = name.lower().replace(" ", ".") + "@" + random.choice(email_domains)
 

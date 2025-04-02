@@ -28,14 +28,12 @@
         <input name="klasse" placeholder="Klasse (optional)" />
         <input name="handy" placeholder="Handynummer (optional)" />
     
-        <!-- Labels statt Placeholder für die Datumsfelder -->
         <label for="gueltig_von">Gültig von (optional):</label>
         <input id="gueltig_von" name="gueltig_von" type="date" />
     
         <label for="gueltig_bis">Gültig bis (optional):</label>
         <input id="gueltig_bis" name="gueltig_bis" type="date" />
     
-        <!-- Textbox für zusätzliche Informationen -->
         <textarea name="info" placeholder="Zusätzliche Informationen (optional)"></textarea>
     
         <button type="submit">Anbieten</button>
@@ -46,6 +44,8 @@
     <form id="searchForm">
         <input name="plz" placeholder="PLZ" required />
         <input name="ort" placeholder="Ort" required />
+        <label for="radius">Umkreis: <span id="radiusValue">10</span> km</label>
+        <input type="range" id="radius" name="radius" min="1" max="100" value="10" oninput="document.getElementById('radiusValue').innerText = this.value">
         <button type="submit">Suchen</button>
     </form>
 
@@ -64,31 +64,14 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
-            
-            // Abrufen und Anzeigen von Mitfahrgelegenheiten
-            fetch('/api/offers')
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data); // Debugging: Ausgabe der Daten
-                    data.forEach(r => {
-                        if (r.latitude && r.longitude) {
-                            const marker = L.marker([r.latitude, r.longitude])
-                                .addTo(map)
-                                .bindPopup(`<b>${r.name}</b><br>${r.plz}, ${r.ort}`)
-                                .openPopup();
-                            markers.push(marker);
-                        }
-                    });
-                })
-                .catch(error => console.error('Fehler beim Abrufen der Mitfahrgelegenheiten:', error));
         }
 
-        // Suchfunktion
         document.getElementById("searchForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const plz = e.target.plz.value;
             const ort = e.target.ort.value;
-            const response = await fetch(`/api/search?plz=${plz}&ort=${ort}`);
+            const radius = e.target.radius.value;
+            const response = await fetch(`/api/search_radius?plz=${plz}&ort=${ort}&radius=${radius}`);
             const results = await response.json();
             
             const resultsList = document.getElementById("results");
@@ -111,7 +94,6 @@
             });
         });
 
-        // Formular zur Mitfahrgelegenheit anbieten
         document.getElementById("offerForm").addEventListener("submit", async function (e) {
             e.preventDefault();
             const formData = new FormData(e.target);
