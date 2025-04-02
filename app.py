@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 import requests
 import re
+from geopy.distance import geodesic
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mitfahrboerse.db'
@@ -113,6 +114,52 @@ def search_offer():
     if not results:
         return jsonify({'error': 'Keine Angebote gefunden'}), 404
     return jsonify([{**vars(fahrt), '_sa_instance_state': None} for fahrt in results]), 200
+
+@app.route('/api/search_radius', methods=['GET'])
+def search_radius():
+    plz = request.args.get('plz')
+    ort = request.args.get('ort')
+    radius = request.args.get('radius', type=int)
+
+    if not plz or not ort or not radius:
+        return jsonify({'error': 'PLZ, Ort und Radius sind erforderlich'}), 400
+
+    # Geocoding, um die geographischen Koordinaten (Latitude und Longitude) des Ortes zu ermitteln
+    location = f"{plz} {ort}, Germany"
+    geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
+    headers = {'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'}
+
+    try:
+        response = requests.get(geocode_url, headers=headers)
+        response.raise_for_status()
+        response_json = response.json()
+        latitude = float(response_json[0]['lat']) if response_json else None
+        longitude = float(response_json[0]['lon']) if response_json else None
+    except requests.exceptions.RequestException as e:
+        print(f"Fehler bei der API-Anfrage: {e}")
+        return jsonify({'error': 'Fehler bei der Geocoding-Anfrage.'}), 500
+
+    if not latitude or not longitude:
+        return jsonify({'error': 'Geocoding für den angegebenen Ort fehlgeschlagen.'}), 500
+
+    # Angebote aus der Datenbank, die innerhalb des Radius liegen
+    results = Mitfahrgelegenheit.query.all()
+    nearby_offers = []
+
+    for offer in results:
+        # Berechne die Entfernung zwischen dem aktuellen Angebot und dem eingegebenen Standort
+        offer_location = (offer.latitude, offer.longitude)
+        user_location = (latitude, longitude)
+        distance = geodesic(user_location, offer_location).km  # Entfernung in km
+
+        # Wenn die Entfernung innerhalb des Radius liegt, füge das Angebot zu den Ergebnissen hinzu
+        if distance <= radius:
+            nearby_offers.append({**vars(offer), '_sa_instance_state': None})
+
+    if not nearby_offers:
+        return jsonify({'error': 'Keine Angebote im angegebenen Radius gefunden'}), 404
+
+    return jsonify(nearby_offers), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
