@@ -38,10 +38,11 @@ def generate_edit_code(length=6):
 
 @app.before_request
 def redirect_to_captcha():
-    # Wenn der Benutzer noch nicht das CAPTCHA bestanden hat, leite ihn zur CAPTCHA-Seite weiter
     if 'captcha_verified' not in session:
-        if request.endpoint != 'captcha' and request.endpoint != 'index':  # Verhindert eine Endlosschleife
-            return redirect('/recaptcha')
+        if request.endpoint and 'static' not in request.endpoint:  # Statische Dateien nicht umleiten
+            if request.endpoint != 'captcha' and request.endpoint != 'index':
+                return redirect('/recaptcha')
+
 
 @app.route('/')
 def index():
