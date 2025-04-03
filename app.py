@@ -158,7 +158,7 @@ def edit_offer():
         data = request.form.to_dict()
     else:
         data = request.get_json()
-        
+
     if not data or 'edit_code' not in data or not data['edit_code'].strip():
         return jsonify({'error': 'Bearbeitungscode ist erforderlich!'}), 400
 
@@ -166,10 +166,29 @@ def edit_offer():
     if not offer:
         return jsonify({'error': 'Kein Angebot mit diesem Bearbeitungscode gefunden!'}), 404
 
-    # Erlaubte Felder aktualisieren
+    # Wenn PLZ oder Ort geändert wurde, müssen wir die Geokoordinaten neu berechnen
+    if 'plz' in data or 'ort' in data:
+        location = f"{data.get('plz', offer.plz)} {data.get('ort', offer.ort)}, Germany"
+        geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
+        headers = {'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'}
+
+        try:
+            response = requests.get(geocode_url, headers=headers)
+            response.raise_for_status()
+            response_json = response.json()
+            latitude = float(response_json[0]['lat']) if response_json else offer.latitude
+            longitude = float(response_json[0]['lon']) if response_json else offer.longitude
+        except requests.exceptions.RequestException as e:
+            return jsonify({'error': f'Fehler bei der Geocoding-Anfrage: {str(e)}'}), 500
+
+        # Setze die neuen Koordinaten
+        offer.latitude = latitude
+        offer.longitude = longitude
+
+    # Erlaubte Felder aktualisieren (aber nur wenn sie geändert wurden und nicht leer sind)
     allowed_fields = ['plz', 'ort', 'strasse', 'name', 'email', 'klasse', 'handy', 'gueltig_von', 'gueltig_bis', 'info']
     for field in allowed_fields:
-        if field in data and getattr(offer, field) != data[field]:
+        if field in data and data[field].strip():  # Nur setzen, wenn nicht leer
             setattr(offer, field, data[field])
 
     try:
