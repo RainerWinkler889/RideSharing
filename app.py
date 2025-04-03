@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect
 from flask_sqlalchemy import SQLAlchemy
 import requests
 import re
@@ -9,6 +9,7 @@ import string
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mitfahrboerse.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'mein_geheimes_schluessel'  # Setze ein geheimes Schlüssel für Sessions
 
 # Datenbankinitialisierung
 db = SQLAlchemy(app)
@@ -35,9 +36,37 @@ with app.app_context():
 def generate_edit_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+@app.before_request
+def redirect_to_captcha():
+    # Wenn der Benutzer noch nicht das CAPTCHA bestanden hat, leite ihn zur CAPTCHA-Seite weiter
+    if 'captcha_verified' not in session:
+        if request.endpoint != 'captcha':  # Verhindert eine Endlosschleife
+            return redirect('/recaptcha')
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html')  # Diese Seite wird nur angezeigt, wenn das CAPTCHA bestanden wurde.
+
+@app.route('/recaptcha', methods=['GET', 'POST'])
+def captcha():
+    if request.method == 'POST':
+        # Überprüfe, ob die eingegebene Zahl korrekt ist
+        captcha_input = request.form.get('captcha_input')
+        if captcha_input == str(session.get('captcha_number')):
+            session['captcha_verified'] = True  # Benutzer hat CAPTCHA bestanden
+            return redirect('/')  # Weiterleitung zur Hauptseite nach erfolgreicher Eingabe
+        else:
+            return redirect('/recaptcha')  # Bei falscher Eingabe zurück zur CAPTCHA-Seite
+    
+    # Generiere eine zufällige 4-stellige Zahl für das CAPTCHA
+    captcha_number = random.randint(1000, 9999)
+    session['captcha_number'] = captcha_number  # Speichere die Zahl in der Session
+    
+    return render_template('recaptcha.html', captcha_number=captcha_number)
+
+@app.route('/index')
+def index_page():
+    return render_template('index.html')  # Deine Hauptseite (index.html)
 
 @app.route('/api/offer', methods=['POST'])
 def offer():
