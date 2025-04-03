@@ -40,7 +40,7 @@ def generate_edit_code(length=6):
 def redirect_to_captcha():
     # Wenn der Benutzer noch nicht das CAPTCHA bestanden hat, leite ihn zur CAPTCHA-Seite weiter
     if 'captcha_verified' not in session:
-        if request.endpoint != 'captcha':  # Verhindert eine Endlosschleife
+        if request.endpoint != 'captcha' and request.endpoint != 'index':  # Verhindert eine Endlosschleife
             return redirect('/recaptcha')
 
 @app.route('/')
@@ -81,14 +81,19 @@ def offer():
 
     location = f"{data['plz']} {data['ort']}, Germany"
     geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
-    headers = {'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'}
+    headers = {'User-Agent': 'Mitfahrboerse/1.0'}
 
     try:
         response = requests.get(geocode_url, headers=headers)
         response.raise_for_status()
         response_json = response.json()
-        latitude = float(response_json[0]['lat']) if response_json else None
-        longitude = float(response_json[0]['lon']) if response_json else None
+
+        if response_json:
+            latitude = float(response_json[0]['lat'])
+            longitude = float(response_json[0]['lon'])
+        else:
+            return jsonify({'error': 'Geolocation konnte nicht ermittelt werden!'}), 500  # Kein Standardwert mehr
+
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Fehler bei der Geocoding-Anfrage: {str(e)}'}), 500
 
@@ -112,10 +117,7 @@ def offer():
     try:
         db.session.add(mitfahrgelegenheit)
         db.session.commit()
-        return jsonify({
-            'message': 'Mitfahrgelegenheit erfolgreich angeboten!',
-            'edit_code': edit_code  # Bearbeitungscode zurückgeben
-        }), 201
+        return jsonify({'message': 'Mitfahrgelegenheit erfolgreich angeboten!', 'edit_code': edit_code}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Fehler beim Speichern: ' + str(e)}), 500
@@ -131,6 +133,30 @@ def search_offer():
     ort = request.args.get('ort')
     if not plz or not ort:
         return jsonify({'error': 'PLZ und Ort sind erforderlich'}), 400
+
+    location = f"{plz} {ort}, Germany"
+    geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
+    headers = {'User-Agent': 'Mitfahrboerse/1.0'}
+
+    try:
+        response = requests.get(geocode_url, headers=headers)
+        response.raise_for_status()
+        response_json = response.json()
+        
+        # Überprüfe die Antwort
+        if not response_json:
+            return jsonify({'error': f'Geocoding keine Ergebnisse für {location}'}), 500
+        
+        latitude = float(response_json[0]['lat']) if response_json else None
+        longitude = float(response_json[0]['lon']) if response_json else None
+
+        # Falls keine Koordinaten gefunden wurden, gibt eine Fehlermeldung zurück
+        if not latitude or not longitude:
+            return jsonify({'error': f'Koordinaten für {location} konnten nicht gefunden werden.'}), 500
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'Fehler bei der Geocoding-Anfrage: ' + str(e)}), 500
+
     results = Mitfahrgelegenheit.query.filter_by(plz=plz, ort=ort).all()
     if not results:
         return jsonify({'error': 'Keine Angebote gefunden'}), 404
@@ -148,19 +174,26 @@ def search_radius():
     # Geocoding, um die geographischen Koordinaten (Latitude und Longitude) des Ortes zu ermitteln
     location = f"{plz} {ort}, Germany"
     geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
-    headers = {'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'}
+    headers = {'User-Agent': 'Mitfahrboerse/1.0'}
 
     try:
         response = requests.get(geocode_url, headers=headers)
         response.raise_for_status()
         response_json = response.json()
+        
+        # Überprüfe die Antwort
+        if not response_json:
+            return jsonify({'error': f'Geocoding keine Ergebnisse für {location}'}), 500
+        
         latitude = float(response_json[0]['lat']) if response_json else None
         longitude = float(response_json[0]['lon']) if response_json else None
+
+        # Falls keine Koordinaten gefunden wurden, gibt eine Fehlermeldung zurück
+        if not latitude or not longitude:
+            return jsonify({'error': f'Koordinaten für {location} konnten nicht gefunden werden.'}), 500
+
     except requests.exceptions.RequestException as e:
         return jsonify({'error': 'Fehler bei der Geocoding-Anfrage: ' + str(e)}), 500
-
-    if not latitude or not longitude:
-        return jsonify({'error': 'Geocoding für den angegebenen Ort fehlgeschlagen.'}), 500
 
     # Angebote aus der Datenbank, die innerhalb des Radius liegen
     results = Mitfahrgelegenheit.query.all()
@@ -195,29 +228,33 @@ def edit_offer():
     if not offer:
         return jsonify({'error': 'Kein Angebot mit diesem Bearbeitungscode gefunden!'}), 404
 
-    # Wenn PLZ oder Ort geändert wurde, müssen wir die Geokoordinaten neu berechnen
-    if 'plz' in data or 'ort' in data:
-        location = f"{data.get('plz', offer.plz)} {data.get('ort', offer.ort)}, Germany"
+    new_plz = data.get('plz', offer.plz)
+    new_ort = data.get('ort', offer.ort)
+
+    if new_plz != offer.plz or new_ort != offer.ort:
+        location = f"{new_plz} {new_ort}, Germany"
         geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
-        headers = {'User-Agent': 'Mitfahrboerse/1.0 (winklerr535@gmail.com)'}
+        headers = {'User-Agent': 'Mitfahrboerse/1.0'}
 
         try:
             response = requests.get(geocode_url, headers=headers)
             response.raise_for_status()
             response_json = response.json()
-            latitude = float(response_json[0]['lat']) if response_json else offer.latitude
-            longitude = float(response_json[0]['lon']) if response_json else offer.longitude
+
+            if response_json:
+                latitude = float(response_json[0]['lat'])
+                longitude = float(response_json[0]['lon'])
+                offer.latitude = latitude
+                offer.longitude = longitude
+            else:
+                return jsonify({'error': 'Geolocation konnte nicht aktualisiert werden!'}), 500  # Keine Standardwerte mehr
+
         except requests.exceptions.RequestException as e:
             return jsonify({'error': f'Fehler bei der Geocoding-Anfrage: {str(e)}'}), 500
 
-        # Setze die neuen Koordinaten
-        offer.latitude = latitude
-        offer.longitude = longitude
-
-    # Erlaubte Felder aktualisieren (aber nur wenn sie geändert wurden und nicht leer sind)
     allowed_fields = ['plz', 'ort', 'strasse', 'name', 'email', 'klasse', 'handy', 'gueltig_von', 'gueltig_bis', 'info']
     for field in allowed_fields:
-        if field in data and data[field].strip():  # Nur setzen, wenn nicht leer
+        if field in data and data[field].strip() and getattr(offer, field) != data[field]:
             setattr(offer, field, data[field])
 
     try:
@@ -228,4 +265,4 @@ def edit_offer():
         return jsonify({'error': f'Fehler beim Aktualisieren: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5100, debug=False)
