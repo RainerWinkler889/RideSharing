@@ -11,6 +11,11 @@
             height: 400px;
             width: 100%;
         }
+
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -21,7 +26,9 @@
     <h1>Mitfahrgelegenheit anbieten</h1>
     <form id="offerForm">
         <input name="plz" placeholder="PLZ" required />
+        <span class="error" id="plzError"></span>
         <input name="ort" placeholder="Ort" required />
+        <span class="error" id="ortError"></span>
         <input name="strasse" placeholder="Straße, Hausnummer" required />
         <input name="name" placeholder="Name" required />
         <input name="email" placeholder="E-Mail" required />
@@ -43,9 +50,9 @@
     <h1>Mitfahrgelegenheit bearbeiten</h1>
     <form id="editForm">
         <input name="edit_code" placeholder="Code zur Bearbeitung" required />
-        <input name="plz" placeholder="Neue PLZ " required />
-        <input name="ort" placeholder="Neuer Ort " required />
-        <input name="strasse" placeholder="Neue Straße, Hausnummer " required />
+        <input name="plz" placeholder="Neue PLZ" required />
+        <input name="ort" placeholder="Neuer Ort" required />
+        <input name="strasse" placeholder="Neue Straße, Hausnummer" required />
         <input name="name" placeholder="Neuer Name (optional)" />
         <input name="email" placeholder="Neue E-Mail (optional)" />
         <input name="klasse" placeholder="Neue Klasse (optional)" />
@@ -154,6 +161,7 @@
 
         window.onload = initMap;
     </script>
-    <footer id="footer"> Bei Problemen wenden Sie sich an: </footer> <footer>Support@BMH.de oder unter +49 6969 888800</footer>
+    <footer id="footer"> Bei Problemen wenden Sie sich an: </footer>
+    <footer>Support@BMH.de oder unter +49 6969 888800</footer>
 </body>
 </html>
