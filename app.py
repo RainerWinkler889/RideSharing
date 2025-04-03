@@ -40,9 +40,8 @@ def generate_edit_code(length=6):
 def redirect_to_captcha():
     if 'captcha_verified' not in session:
         if request.endpoint and 'static' not in request.endpoint:  # Statische Dateien nicht umleiten
-            if request.endpoint != 'captcha' and request.endpoint != 'index':
+            if request.endpoint not in ['captcha', 'recaptcha']:
                 return redirect('/recaptcha')
-
 
 @app.route('/')
 def index():
@@ -232,6 +231,7 @@ def edit_offer():
     new_plz = data.get('plz', offer.plz)
     new_ort = data.get('ort', offer.ort)
 
+    # Nur wenn PLZ oder Ort geändert wurden, neue Koordinaten holen
     if new_plz != offer.plz or new_ort != offer.ort:
         location = f"{new_plz} {new_ort}, Germany"
         geocode_url = f"https://nominatim.openstreetmap.org/search?format=json&q={location}"
@@ -243,19 +243,18 @@ def edit_offer():
             response_json = response.json()
 
             if response_json:
-                latitude = float(response_json[0]['lat'])
-                longitude = float(response_json[0]['lon'])
-                offer.latitude = latitude
-                offer.longitude = longitude
+                offer.latitude = float(response_json[0]['lat'])
+                offer.longitude = float(response_json[0]['lon'])
             else:
-                return jsonify({'error': 'Geolocation konnte nicht aktualisiert werden!'}), 500  # Keine Standardwerte mehr
+                return jsonify({'error': 'Geolocation konnte nicht aktualisiert werden!'}), 500
 
         except requests.exceptions.RequestException as e:
             return jsonify({'error': f'Fehler bei der Geocoding-Anfrage: {str(e)}'}), 500
 
+    # Alle anderen Felder aktualisieren, wenn sie angegeben sind
     allowed_fields = ['plz', 'ort', 'strasse', 'name', 'email', 'klasse', 'handy', 'gueltig_von', 'gueltig_bis', 'info']
     for field in allowed_fields:
-        if field in data and data[field].strip() and getattr(offer, field) != data[field]:
+        if field in data and data[field].strip():
             setattr(offer, field, data[field])
 
     try:
@@ -264,6 +263,7 @@ def edit_offer():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Fehler beim Aktualisieren: {str(e)}'}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5100, debug=False)
