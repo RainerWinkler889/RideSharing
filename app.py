@@ -152,9 +152,13 @@ def search_radius():
 
     return jsonify(nearby_offers), 200
 
-@app.route('/api/edit_offer', methods=['PUT'])
+@app.route('/api/edit_offer', methods=['PUT', 'POST'])
 def edit_offer():
-    data = request.get_json()
+    if request.method == 'POST':
+        data = request.form.to_dict()
+    else:
+        data = request.get_json()
+        
     if not data or 'edit_code' not in data or not data['edit_code'].strip():
         return jsonify({'error': 'Bearbeitungscode ist erforderlich!'}), 400
 
